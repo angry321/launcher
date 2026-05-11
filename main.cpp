@@ -10,29 +10,44 @@
 #include <QMouseEvent>
 #include <QScreen>
 
-// ─── Создаём иконку (синий круг) ────────────────────────────
-QIcon createIcon() {
-    QPixmap pixmap(64, 64);
-    pixmap.fill(Qt::transparent);
-    QPainter painter(&pixmap);
+// ─── Путь к твоему фото ─────────────────────────────────────
+static const QString IMAGE_PATH = "/home/user/launcher/icon.png"; // ← ИЗМЕНИ
+
+// Обрезает фото в круг заданного размера
+QPixmap createPixmap(int size) {
+    QPixmap result(size, size);
+    result.fill(Qt::transparent);
+
+    // Загружаем фото и масштабируем под размер
+    QPixmap photo(IMAGE_PATH);
+    if (photo.isNull()) {
+        // Если фото не найдено — fallback синий круг
+        QPainter p(&result);
+        p.setRenderHint(QPainter::Antialiasing);
+        p.setBrush(QColor("#5865F2"));
+        p.setPen(Qt::NoPen);
+        p.drawEllipse(2, 2, size - 4, size - 4);
+        return result;
+    }
+
+    photo = photo.scaled(size, size, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
+
+    // Центрируем если фото не квадратное
+    int x = (photo.width()  - size) / 2;
+    int y = (photo.height() - size) / 2;
+    photo = photo.copy(x, y, size, size);
+
+    // Рисуем фото через круглую маску
+    QPainter painter(&result);
     painter.setRenderHint(QPainter::Antialiasing);
-    painter.setBrush(QColor("#5865F2"));
-    painter.setPen(Qt::NoPen);
-    painter.drawEllipse(4, 4, 56, 56);
-    painter.end();
-    return QIcon(pixmap);
+    painter.setClipRegion(QRegion(2, 2, size - 4, size - 4, QRegion::Ellipse));
+    painter.drawPixmap(0, 0, photo);
+    return result;
 }
 
-QPixmap createPixmap(int size) {
-    QPixmap pixmap(size, size);
-    pixmap.fill(Qt::transparent);
-    QPainter painter(&pixmap);
-    painter.setRenderHint(QPainter::Antialiasing);
-    painter.setBrush(QColor("#5865F2"));
-    painter.setPen(Qt::NoPen);
-    painter.drawEllipse(2, 2, size - 4, size - 4);
-    painter.end();
-    return pixmap;
+// Иконка для трея (тоже из фото)
+QIcon createIcon() {
+    return QIcon(createPixmap(64));
 }
 
 void launchApp(const QString &command) {
